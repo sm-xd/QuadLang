@@ -1,0 +1,5 @@
+LET a = 1
+LET b = -3
+LET c = 2
+QUAD(a,b,c)
+SHOW ROOTS

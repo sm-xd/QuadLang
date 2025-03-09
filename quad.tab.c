@@ -69,19 +69,36 @@
 /* First part of user prologue.  */
 #line 1 "quad.y"
 
+#include "ast.h"      // Ensure that Node and AST definitions are available
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 
 void yyerror(const char *s);
 int yylex();
-int symbol_table[256];  // Store variables (single character names)
 
+int symbol_table[256]; // Variable storage
 int a, b, c;
 double root1, root2;
 
+// Global pointer to the AST root (a sequence of statements)
+Node *ast_root = NULL;
 
-#line 85 "quad.tab.c"
+// Function declarations for AST node creation
+Node *create_assign_node(char *var, int value);
+Node *create_quad_node(char *var1, char *var2, char *var3);
+Node *create_show_node();
+Node *create_if_node(Node *cond, Node *thenStmt, Node *elseStmt);
+Node *create_comp_node(char *var, char *cmp, int number);
+Node *create_literal_node(int literal);
+Node *append_node(Node *list, Node *node);
+
+// Evaluation functions
+void evaluate(Node *node);
+int evaluate_expr(Node *node);
+
+#line 102 "quad.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -116,15 +133,26 @@ enum yysymbol_kind_t
   YYSYMBOL_QUAD = 4,                       /* QUAD  */
   YYSYMBOL_SHOW = 5,                       /* SHOW  */
   YYSYMBOL_ROOTS = 6,                      /* ROOTS  */
-  YYSYMBOL_VAR = 7,                        /* VAR  */
-  YYSYMBOL_NUMBER = 8,                     /* NUMBER  */
-  YYSYMBOL_9_ = 9,                         /* '='  */
-  YYSYMBOL_10_ = 10,                       /* '('  */
-  YYSYMBOL_11_ = 11,                       /* ','  */
-  YYSYMBOL_12_ = 12,                       /* ')'  */
-  YYSYMBOL_YYACCEPT = 13,                  /* $accept  */
-  YYSYMBOL_program = 14,                   /* program  */
-  YYSYMBOL_statement = 15                  /* statement  */
+  YYSYMBOL_IF = 7,                         /* IF  */
+  YYSYMBOL_ELSE = 8,                       /* ELSE  */
+  YYSYMBOL_THEN = 9,                       /* THEN  */
+  YYSYMBOL_ENDIF = 10,                     /* ENDIF  */
+  YYSYMBOL_CMP = 11,                       /* CMP  */
+  YYSYMBOL_NUMBER = 12,                    /* NUMBER  */
+  YYSYMBOL_VAR = 13,                       /* VAR  */
+  YYSYMBOL_14_ = 14,                       /* '='  */
+  YYSYMBOL_15_ = 15,                       /* '('  */
+  YYSYMBOL_16_ = 16,                       /* ','  */
+  YYSYMBOL_17_ = 17,                       /* ')'  */
+  YYSYMBOL_YYACCEPT = 18,                  /* $accept  */
+  YYSYMBOL_program = 19,                   /* program  */
+  YYSYMBOL_statement = 20,                 /* statement  */
+  YYSYMBOL_assign = 21,                    /* assign  */
+  YYSYMBOL_quad = 22,                      /* quad  */
+  YYSYMBOL_show = 23,                      /* show  */
+  YYSYMBOL_if_statement = 24,              /* if_statement  */
+  YYSYMBOL_opt_else = 25,                  /* opt_else  */
+  YYSYMBOL_condition = 26                  /* condition  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
@@ -452,19 +480,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  2
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   15
+#define YYLAST   31
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  13
+#define YYNTOKENS  18
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  3
+#define YYNNTS  9
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  6
+#define YYNRULES  15
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  18
+#define YYNSTATES  34
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   263
+#define YYMAXUTOK   268
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -482,9 +510,9 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-      10,    12,     2,     2,    11,     2,     2,     2,     2,     2,
+      15,    17,     2,     2,    16,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
-       2,     9,     2,     2,     2,     2,     2,     2,     2,     2,
+       2,    14,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
@@ -504,14 +532,15 @@ static const yytype_int8 yytranslate[] =
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     2,     2,     2,     2,
        2,     2,     2,     2,     2,     2,     1,     2,     3,     4,
-       5,     6,     7,     8
+       5,     6,     7,     8,     9,    10,    11,    12,    13
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int8 yyrline[] =
 {
-       0,    26,    26,    27,    31,    35,    48
+       0,    52,    52,    53,    57,    58,    59,    60,    64,    68,
+      72,    76,    80,    81,    85,    86
 };
 #endif
 
@@ -528,8 +557,9 @@ static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
 static const char *const yytname[] =
 {
   "\"end of file\"", "error", "\"invalid token\"", "LET", "QUAD", "SHOW",
-  "ROOTS", "VAR", "NUMBER", "'='", "'('", "','", "')'", "$accept",
-  "program", "statement", YY_NULLPTR
+  "ROOTS", "IF", "ELSE", "THEN", "ENDIF", "CMP", "NUMBER", "VAR", "'='",
+  "'('", "','", "')'", "$accept", "program", "statement", "assign", "quad",
+  "show", "if_statement", "opt_else", "condition", YY_NULLPTR
 };
 
 static const char *
@@ -539,7 +569,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-9)
+#define YYPACT_NINF (-20)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -553,8 +583,10 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int8 yypact[] =
 {
-      -9,     0,    -9,    -6,    -8,     1,    -9,    -3,     2,    -9,
-       3,    -1,    -9,     5,     4,     6,    -4,    -9
+     -20,     0,   -20,   -12,    -9,    10,     2,   -20,   -20,   -20,
+     -20,   -20,    -2,     4,   -20,   -20,     7,    11,     9,     3,
+      12,     6,   -20,    13,   -20,    14,    15,     6,    17,    16,
+     -20,   -20,     8,   -20
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -562,20 +594,22 @@ static const yytype_int8 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-       2,     0,     1,     0,     0,     0,     3,     0,     0,     6,
-       0,     0,     4,     0,     0,     0,     0,     5
+       2,     0,     1,     0,     0,     0,     0,     3,     4,     5,
+       6,     7,     0,     0,    10,    15,     0,     0,     0,     0,
+       0,     0,     8,     0,    14,    12,     0,     0,     0,     0,
+      13,    11,     0,     9
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-      -9,    -9,    -9
+     -20,   -20,   -19,   -20,   -20,   -20,   -20,   -20,   -20
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     1,     6
+       0,     1,     7,     8,     9,    10,    11,    28,    17
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -583,34 +617,42 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-       2,     7,     8,     3,     4,     5,    10,     9,    17,    11,
-      13,    12,    14,    16,     0,    15
+       2,    12,    25,     3,     4,     5,    13,     6,    30,     3,
+       4,     5,    18,     6,    15,    16,    14,    19,    20,    23,
+      21,    22,    27,     0,    24,    33,    26,    31,     0,    32,
+       0,    29
 };
 
 static const yytype_int8 yycheck[] =
 {
-       0,     7,    10,     3,     4,     5,     9,     6,    12,     7,
-      11,     8,     7,     7,    -1,    11
+       0,    13,    21,     3,     4,     5,    15,     7,    27,     3,
+       4,     5,    14,     7,    12,    13,     6,    13,    11,    16,
+       9,    12,     8,    -1,    12,    17,    13,    10,    -1,    13,
+      -1,    16
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,    14,     0,     3,     4,     5,    15,     7,    10,     6,
-       9,     7,     8,    11,     7,    11,     7,    12
+       0,    19,     0,     3,     4,     5,     7,    20,    21,    22,
+      23,    24,    13,    15,     6,    12,    13,    26,    14,    13,
+      11,     9,    12,    16,    12,    20,    13,     8,    25,    16,
+      20,    10,    13,    17
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    13,    14,    14,    15,    15,    15
+       0,    18,    19,    19,    20,    20,    20,    20,    21,    22,
+      23,    24,    25,    25,    26,    26
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     0,     2,     4,     8,     2
+       0,     2,     0,     2,     1,     1,     1,     1,     4,     8,
+       2,     6,     0,     2,     3,     1
 };
 
 
@@ -1073,43 +1115,92 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 4: /* statement: LET VAR '=' NUMBER  */
-#line 31 "quad.y"
-                       { 
-        symbol_table[(yyvsp[-2].str)[0]] = (yyvsp[0].num); 
-        printf("%s = %d stored.\n", (yyvsp[-2].str), (yyvsp[0].num));
-    }
-#line 1083 "quad.tab.c"
+  case 2: /* program: %empty  */
+#line 52 "quad.y"
+                  { (yyval.node) = NULL; ast_root = (yyval.node); }
+#line 1122 "quad.tab.c"
     break;
 
-  case 5: /* statement: QUAD '(' VAR ',' VAR ',' VAR ')'  */
-#line 35 "quad.y"
-                                       {
-        a = symbol_table[(yyvsp[-5].str)[0]];
-        b = symbol_table[(yyvsp[-3].str)[0]];
-        c = symbol_table[(yyvsp[-1].str)[0]];
-        double discriminant = b * b - 4 * a * c;
-        if (discriminant >= 0) {
-            root1 = (-b + sqrt(discriminant)) / (2 * a);
-            root2 = (-b - sqrt(discriminant)) / (2 * a);
-            printf("Quadratic roots computed.\n");
-        } else {
-            printf("No real roots exist.\n");
-        }
-    }
-#line 1101 "quad.tab.c"
+  case 3: /* program: program statement  */
+#line 53 "quad.y"
+                        { (yyval.node) = append_node((yyvsp[-1].node), (yyvsp[0].node)); ast_root = (yyval.node); }
+#line 1128 "quad.tab.c"
     break;
 
-  case 6: /* statement: SHOW ROOTS  */
-#line 48 "quad.y"
-                 {
-        printf("x1 = %.2lf, x2 = %.2lf\n", root1, root2);
-    }
-#line 1109 "quad.tab.c"
+  case 4: /* statement: assign  */
+#line 57 "quad.y"
+                   { (yyval.node) = (yyvsp[0].node); }
+#line 1134 "quad.tab.c"
+    break;
+
+  case 5: /* statement: quad  */
+#line 58 "quad.y"
+                   { (yyval.node) = (yyvsp[0].node); }
+#line 1140 "quad.tab.c"
+    break;
+
+  case 6: /* statement: show  */
+#line 59 "quad.y"
+                   { (yyval.node) = (yyvsp[0].node); }
+#line 1146 "quad.tab.c"
+    break;
+
+  case 7: /* statement: if_statement  */
+#line 60 "quad.y"
+                   { (yyval.node) = (yyvsp[0].node); }
+#line 1152 "quad.tab.c"
+    break;
+
+  case 8: /* assign: LET VAR '=' NUMBER  */
+#line 64 "quad.y"
+                       { (yyval.node) = create_assign_node((yyvsp[-2].str), (yyvsp[0].num)); }
+#line 1158 "quad.tab.c"
+    break;
+
+  case 9: /* quad: QUAD '(' VAR ',' VAR ',' VAR ')'  */
+#line 68 "quad.y"
+                                     { (yyval.node) = create_quad_node((yyvsp[-5].str), (yyvsp[-3].str), (yyvsp[-1].str)); }
+#line 1164 "quad.tab.c"
+    break;
+
+  case 10: /* show: SHOW ROOTS  */
+#line 72 "quad.y"
+               { (yyval.node) = create_show_node(); }
+#line 1170 "quad.tab.c"
+    break;
+
+  case 11: /* if_statement: IF condition THEN statement opt_else ENDIF  */
+#line 76 "quad.y"
+                                               { (yyval.node) = create_if_node((yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node)); }
+#line 1176 "quad.tab.c"
+    break;
+
+  case 12: /* opt_else: %empty  */
+#line 80 "quad.y"
+                  { (yyval.node) = NULL; }
+#line 1182 "quad.tab.c"
+    break;
+
+  case 13: /* opt_else: ELSE statement  */
+#line 81 "quad.y"
+                     { (yyval.node) = (yyvsp[0].node); }
+#line 1188 "quad.tab.c"
+    break;
+
+  case 14: /* condition: VAR CMP NUMBER  */
+#line 85 "quad.y"
+                   { (yyval.node) = create_comp_node((yyvsp[-2].str), (yyvsp[-1].str), (yyvsp[0].num)); }
+#line 1194 "quad.tab.c"
+    break;
+
+  case 15: /* condition: NUMBER  */
+#line 86 "quad.y"
+                   { (yyval.node) = create_literal_node((yyvsp[0].num)); }
+#line 1200 "quad.tab.c"
     break;
 
 
-#line 1113 "quad.tab.c"
+#line 1204 "quad.tab.c"
 
       default: break;
     }
@@ -1302,15 +1393,154 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 53 "quad.y"
+#line 89 "quad.y"
 
 
 void yyerror(const char *s) {
-    printf("Error: %s\n", s);
+    fprintf(stderr, "Error: %s\n", s);
+}
+
+// --- AST Node Creation Functions ---
+
+Node *create_assign_node(char *var, int value) {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_ASSIGN;
+    node->next = NULL;
+    node->data.assign.var = var;
+    node->data.assign.value = value;
+    return node;
+}
+
+Node *create_quad_node(char *var1, char *var2, char *var3) {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_QUAD;
+    node->next = NULL;
+    node->data.quad.var1 = var1;
+    node->data.quad.var2 = var2;
+    node->data.quad.var3 = var3;
+    return node;
+}
+
+Node *create_show_node() {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_SHOW;
+    node->next = NULL;
+    return node;
+}
+
+Node *create_if_node(Node *cond, Node *thenStmt, Node *elseStmt) {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_IF;
+    node->next = NULL;
+    node->data.ifnode.cond = cond;
+    node->data.ifnode.thenStmt = thenStmt;
+    node->data.ifnode.elseStmt = elseStmt;
+    return node;
+}
+
+Node *create_comp_node(char *var, char *cmp, int number) {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_EXPR_COMP;
+    node->next = NULL;
+    node->data.comp.var = var;
+    node->data.comp.cmp = cmp;
+    node->data.comp.number = number;
+    return node;
+}
+
+Node *create_literal_node(int literal) {
+    Node *node = malloc(sizeof(Node));
+    node->type = NODE_EXPR_LITERAL;
+    node->next = NULL;
+    node->data.literal.literal = literal;
+    return node;
+}
+
+Node *append_node(Node *list, Node *node) {
+    if (list == NULL) return node;
+    Node *temp = list;
+    while (temp->next != NULL)
+        temp = temp->next;
+    temp->next = node;
+    return list;
+}
+
+// --- Evaluation Functions ---
+
+void evaluate(Node *node) {
+    while (node) {
+        switch (node->type) {
+            case NODE_ASSIGN: {
+                symbol_table[node->data.assign.var[0]] = node->data.assign.value;
+                printf("%s = %d stored.\n", node->data.assign.var, node->data.assign.value);
+                break;
+            }
+            case NODE_QUAD: {
+                char var1 = node->data.quad.var1[0];
+                char var2 = node->data.quad.var2[0];
+                char var3 = node->data.quad.var3[0];
+                a = symbol_table[(int)var1];
+                b = symbol_table[(int)var2];
+                c = symbol_table[(int)var3];
+                double discriminant = b * b - 4 * a * c;
+                if (discriminant >= 0) {
+                    root1 = (-b + sqrt(discriminant)) / (2 * a);
+                    root2 = (-b - sqrt(discriminant)) / (2 * a);
+                    printf("Quadratic roots computed.\n");
+                } else {
+                    printf("No real roots exist.\n");
+                }
+                break;
+            }
+            case NODE_SHOW: {
+                printf("x1 = %.2lf, x2 = %.2lf\n", root1, root2);
+                break;
+            }
+            case NODE_IF: {
+                int cond = evaluate_expr(node->data.ifnode.cond);
+                if (cond) {
+                    evaluate(node->data.ifnode.thenStmt);
+                } else if (node->data.ifnode.elseStmt) {
+                    evaluate(node->data.ifnode.elseStmt);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        node = node->next;
+    }
+}
+
+int evaluate_expr(Node *node) {
+    if (!node) return 0;
+    switch (node->type) {
+        case NODE_EXPR_LITERAL:
+            return node->data.literal.literal;
+        case NODE_EXPR_COMP: {
+            int var_value = symbol_table[node->data.comp.var[0]];
+            if (strcmp(node->data.comp.cmp, ">") == 0)
+                return var_value > node->data.comp.number;
+            else if (strcmp(node->data.comp.cmp, "<") == 0)
+                return var_value < node->data.comp.number;
+            else if (strcmp(node->data.comp.cmp, ">=") == 0)
+                return var_value >= node->data.comp.number;
+            else if (strcmp(node->data.comp.cmp, "<=") == 0)
+                return var_value <= node->data.comp.number;
+            else if (strcmp(node->data.comp.cmp, "==") == 0)
+                return var_value == node->data.comp.number;
+            else if (strcmp(node->data.comp.cmp, "!=") == 0)
+                return var_value != node->data.comp.number;
+            return 0;
+        }
+        default:
+            return 0;
+    }
 }
 
 int main() {
     printf("Enter QuadLang expressions:\n");
     yyparse();
+    evaluate(ast_root);
     return 0;
 }

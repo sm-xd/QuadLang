@@ -44,6 +44,12 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
+/* "%code requires" blocks.  */
+#line 33 "quad.y"
+
+#include "ast.h"
+
+#line 53 "quad.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -58,8 +64,13 @@ extern int yydebug;
     QUAD = 259,                    /* QUAD  */
     SHOW = 260,                    /* SHOW  */
     ROOTS = 261,                   /* ROOTS  */
-    VAR = 262,                     /* VAR  */
-    NUMBER = 263                   /* NUMBER  */
+    IF = 262,                      /* IF  */
+    ELSE = 263,                    /* ELSE  */
+    THEN = 264,                    /* THEN  */
+    ENDIF = 265,                   /* ENDIF  */
+    CMP = 266,                     /* CMP  */
+    NUMBER = 267,                  /* NUMBER  */
+    VAR = 268                      /* VAR  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -68,12 +79,13 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 15 "quad.y"
+#line 37 "quad.y"
 
     int num;
     char *str;
+    Node *node;
 
-#line 77 "quad.tab.h"
+#line 89 "quad.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

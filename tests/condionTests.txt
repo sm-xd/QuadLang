@@ -1,0 +1,59 @@
+==============================
+Test Case 1:
+Input:
+LET a = 1
+LET b = -3
+LET c = 2
+QUAD(a,b,c)
+SHOW ROOTS
+
+Expected Output:
+a = 1 stored.
+b = -3 stored.
+c = 2 stored.
+Quadratic roots computed.
+x1 = 2.00, x2 = 1.00
+------------------------------
+
+Test Case 2:
+Input:
+IF 1 THEN LET d = 100 ELSE LET d = 200 ENDIF
+
+Expected Output:
+d = 100 stored.
+------------------------------
+
+Test Case 3:
+Input:
+LET a = 10
+IF a > 5 THEN LET e = 500 ELSE LET e = 100 ENDIF
+
+Expected Output:
+a = 10 stored.
+e = 500 stored.
+------------------------------
+
+Test Case 4:
+Input:
+IF 0 THEN LET f = 5 ELSE LET f = 10 ENDIF
+
+Expected Output:
+f = 10 stored.
+------------------------------
+
+Test Case 5:
+Input:
+LET a = 1
+LET b = -5
+LET c = 6
+QUAD(a,b,c)
+IF a != 1 THEN SHOW ROOTS ELSE LET dummy = 42 ENDIF
+
+Expected Output:
+a = 1 stored.
+b = -5 stored.
+c = 6 stored.
+Quadratic roots computed.
+x1 = 3.00, x2 = 2.00
+dummy = 42 stored.
+==============================
